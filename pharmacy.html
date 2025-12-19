@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Espace Pharmacie — PharmaMap TN</title>
+  <style>
+    body { font-family: system-ui, Arial; margin:0; }
+    header { padding:12px 16px; border-bottom:1px solid #eee; display:flex; gap:12px; align-items:center; }
+    main { padding:16px; max-width:900px; margin:0 auto; }
+    input, textarea { width:100%; padding:10px 12px; border-radius:10px; border:1px solid #ddd; }
+    button { padding:10px 12px; border-radius:10px; border:1px solid #ddd; background:#fff; cursor:pointer; }
+    .grid { display:grid; gap:12px; grid-template-columns: 1fr 1fr; }
+    .card { border:1px solid #eee; border-radius:12px; padding:12px; margin:12px 0; }
+    .muted { color:#666; font-size:14px; }
+    code { background:#f6f6f6; padding:2px 6px; border-radius:8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Espace Pharmacie</strong>
+    <a href="./index.html" style="margin-left:auto;">← Retour</a>
+  </header>
+
+  <main>
+    <div class="card">
+      <div class="grid">
+        <div>
+          <label>ID Pharmacie</label>
+          <input id="pid" placeholder="ex: 12" />
+        </div>
+        <div>
+          <label>Code (auth_code)</label>
+          <input id="pcode" placeholder="ex: PHARMA-483920" />
+        </div>
+      </div>
+      <p class="muted">Chaque pharmacie a un code unique. Sans ce code, aucune modification n’est possible.</p>
+    </div>
+
+    <div class="card">
+      <label>Horaires (JSON)</label>
+      <textarea id="hours" rows="10"></textarea>
+      <p class="muted">Exemple: <code>{"lun":[{"de":"08:00","a":"18:00"}],"dim":[]}</code></p>
+      <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+        <button id="btnLoad">Charger</button>
+        <button id="btnSave">Enregistrer horaires</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>Pharmacie de garde (JSON)</label>
+      <textarea id="garde" rows="8"></textarea>
+      <p class="muted">Exemple: <code>[{"date":"2025-12-20","de":"18:00","a":"08:00"}]</code></p>
+      <button id="btnSaveGarde" style="margin-top:10px;">Enregistrer garde</button>
+    </div>
+
+    <div class="card">
+      <label>Mises à jour spéciales (JSON)</label>
+      <textarea id="special" rows="8"></textarea>
+      <p class="muted">Exemple: <code>[{"date":"2025-01-01","ferme":true}]</code></p>
+      <button id="btnSaveSpecial" style="margin-top:10px;">Enregistrer spécial</button>
+    </div>
+
+    <div id="msg" class="muted"></div>
+  </main>
+
+  <script>
+    // ✅ Remplace cette URL par l’URL de ton Apps Script déployé (Web App)
+   const API_URL = "https://script.google.com/macros/s/AKfycbzerOqDA8hUeXuwUVSYnINSJ5xUvyW-uD9_KuEDGVac_W_xqDC9qyPVxPpGCraIAQC-/exec";
+
+
+    const $msg = document.getElementById("msg");
+    const $pid = document.getElementById("pid");
+    const $pcode = document.getElementById("pcode");
+    const $hours = document.getElementById("hours");
+    const $garde = document.getElementById("garde");
+    const $special = document.getElementById("special");
+
+    document.getElementById("btnLoad").onclick = loadPharmacy;
+    document.getElementById("btnSave").onclick = () => saveField("horaires_json", $hours.value);
+    document.getElementById("btnSaveGarde").onclick = () => saveField("garde_json", $garde.value);
+    document.getElementById("btnSaveSpecial").onclick = () => saveField("maj_speciale_json", $special.value);
+
+    async function loadPharmacy() {
+      try {
+        $msg.textContent = "Chargement…";
+        const res = await fetch(API_URL);
+        const json = await res.json();
+        if (!json.ok) throw new Error(json.error || "Erreur API");
+
+        const p = json.pharmacies.find(x => String(x.id) === String($pid.value.trim()));
+        if (!p) throw new Error("Pharmacie introuvable");
+
+        $hours.value = JSON.stringify(p.horaires_json || {}, null, 2);
+        $garde.value = JSON.stringify(p.garde_json || [], null, 2);
+        $special.value = JSON.stringify(p.maj_speciale_json || [], null, 2);
+
+        $msg.textContent = "Données chargées.";
+      } catch (e) {
+        $msg.textContent = "Erreur: " + e.message;
+      }
+    }
+
+    async function saveField(fieldName, rawJson) {
+      try {
+        $msg.textContent = "Enregistrement…";
+        const id = $pid.value.trim();
+        const auth_code = $pcode.value.trim();
+        if (!id || !auth_code) throw new Error("ID et code requis");
+
+        const parsed = rawJson.trim() ? JSON.parse(rawJson) : (fieldName === "horaires_json" ? {} : []);
+
+        const payload = { id, auth_code };
+        payload[fieldName] = parsed;
+
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (!json.ok) throw new Error(json.error || "Erreur API");
+
+        $msg.textContent = "OK ✅ enregistré.";
+      } catch (e) {
+        $msg.textContent = "Erreur: " + e.message;
+      }
+    }
+  </script>
+</body>
+</html>
