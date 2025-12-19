@@ -5,113 +5,677 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Espace Pharmacie — PharmaMap TN</title>
   <style>
-    body { font-family: system-ui, Arial; margin:0; }
-    header { padding:12px 16px; border-bottom:1px solid #eee; display:flex; gap:12px; align-items:center; }
-    main { padding:16px; max-width:900px; margin:0 auto; }
-    input, textarea { width:100%; padding:10px 12px; border-radius:10px; border:1px solid #ddd; }
-    button { padding:10px 12px; border-radius:10px; border:1px solid #ddd; background:#fff; cursor:pointer; }
-    .grid { display:grid; gap:12px; grid-template-columns: 1fr 1fr; }
-    .card { border:1px solid #eee; border-radius:12px; padding:12px; margin:12px 0; }
-    .muted { color:#666; font-size:14px; }
-    code { background:#f6f6f6; padding:2px 6px; border-radius:8px; }
+    :root{
+      --bg:#0b1020;
+      --card:#0f1733;
+      --card2:#101b3d;
+      --text:#e9ecff;
+      --muted:#aab2e6;
+      --line:rgba(255,255,255,.10);
+      --accent:#7aa7ff;
+      --good:#33d18f;
+      --bad:#ff5a7a;
+      --warn:#ffcc66;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: radial-gradient(1200px 600px at 20% 0%, rgba(122,167,255,.25), transparent 50%),
+                  radial-gradient(1200px 600px at 90% 10%, rgba(51,209,143,.18), transparent 45%),
+                  var(--bg);
+      color:var(--text);
+    }
+    a{ color:var(--accent); text-decoration:none; }
+    header{
+      padding:18px 18px 0 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      max-width:1100px;
+      margin:0 auto;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+    .dot{ width:10px; height:10px; border-radius:999px; background:var(--accent); box-shadow: 0 0 20px rgba(122,167,255,.7); }
+    main{ max-width:1100px; margin:0 auto; padding:18px; }
+    .grid{
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      gap:16px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:14px 14px;
+      background: rgba(255,255,255,.03);
+      border-bottom:1px solid var(--line);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    .card .bd{ padding:14px; }
+    .title{ font-size:14px; font-weight:700; color:var(--text); }
+    .sub{ font-size:12px; color:var(--muted); }
+    label{ display:block; font-size:12px; color:var(--muted); margin-bottom:6px; }
+    input, select, button{
+      font: inherit;
+    }
+    input, select{
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      color:var(--text);
+      outline:none;
+    }
+    input::placeholder{ color: rgba(233,236,255,.5); }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+    .row > *{ flex:1; min-width: 140px; }
+    .btn{
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background: rgba(122,167,255,.14);
+      color:var(--text);
+      cursor:pointer;
+      transition: transform .05s ease, background .2s ease;
+      font-weight:600;
+    }
+    .btn:hover{ background: rgba(122,167,255,.22); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.ghost{
+      background: rgba(255,255,255,.06);
+    }
+    .btn.good{ background: rgba(51,209,143,.18); }
+    .btn.good:hover{ background: rgba(51,209,143,.26); }
+    .btn.bad{ background: rgba(255,90,122,.18); }
+    .btn.bad:hover{ background: rgba(255,90,122,.26); }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color:var(--muted);
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .tabs{
+      display:flex;
+      gap:8px;
+      padding:10px;
+      border-bottom:1px solid var(--line);
+      background: rgba(0,0,0,.10);
+      flex-wrap:wrap;
+    }
+    .tab{
+      padding:9px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      cursor:pointer;
+      font-weight:700;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .tab.active{
+      background: rgba(122,167,255,.18);
+      color: var(--text);
+      border-color: rgba(122,167,255,.35);
+    }
+    .section{ display:none; padding:14px; }
+    .section.active{ display:block; }
+    .msg{
+      margin-top:10px;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .msg.ok{ color: var(--good); }
+    .msg.err{ color: var(--bad); }
+
+    /* editor rows */
+    .day{
+      border:1px solid var(--line);
+      border-radius:14px;
+      overflow:hidden;
+      margin-bottom:10px;
+      background: rgba(0,0,0,.12);
+    }
+    .day-hd{
+      padding:10px 12px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      border-bottom:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+    }
+    .day-name{ font-weight:800; font-size:13px; }
+    .small{ font-size:12px; color:var(--muted); }
+    .ranges{ padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+    .range{
+      display:grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap:8px;
+      align-items:center;
+    }
+    .iconbtn{
+      width:38px;
+      height:38px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      cursor:pointer;
+      color:var(--text);
+      font-weight:900;
+    }
+    .iconbtn:hover{ background: rgba(255,255,255,.10); }
+    .toolbar{
+      display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;
+      padding:12px 14px;
+      border-top:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+    }
+    .hint{
+      border:1px dashed rgba(255,255,255,.18);
+      background: rgba(255,255,255,.04);
+      padding:10px 12px;
+      border-radius:14px;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .listitem{
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.10);
+      border-radius:14px;
+      padding:10px 12px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin:8px 0;
+    }
+    .listitem strong{ font-size:13px; }
+    .listitem span{ font-size:12px; color:var(--muted); }
   </style>
 </head>
 <body>
   <header>
-    <strong>Espace Pharmacie</strong>
-    <a href="./index.html" style="margin-left:auto;">← Retour</a>
+    <div class="brand"><span class="dot"></span> Espace Pharmacie</div>
+    <a href="./index.html">← Retour</a>
   </header>
 
   <main>
-    <div class="card">
-      <div class="grid">
-        <div>
-          <label>ID Pharmacie</label>
-          <input id="pid" placeholder="ex: 12" />
+    <div class="grid">
+      <!-- LOGIN / INFO -->
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">Connexion</div>
+            <div class="sub">Entrez votre ID + code pour modifier vos horaires</div>
+          </div>
+          <span class="pill" id="statusPill">Déconnecté</span>
         </div>
-        <div>
-          <label>Code (auth_code)</label>
-          <input id="pcode" placeholder="ex: PHARMA-483920" />
+        <div class="bd">
+          <div class="row">
+            <div>
+              <label>ID Pharmacie</label>
+              <input id="pid" placeholder="ex: 12" />
+            </div>
+            <div>
+              <label>Code</label>
+              <input id="pcode" placeholder="ex: PHARMA-483920" />
+            </div>
+          </div>
+          <div style="margin-top:10px" class="row">
+            <button class="btn good" id="btnLoad">Charger ma fiche</button>
+            <button class="btn ghost" id="btnClear">Effacer</button>
+          </div>
+
+          <div class="msg" id="msgLogin"></div>
+
+          <div style="margin-top:14px" class="hint">
+            ✅ Conseil : gardez votre code privé. Sans ce code, personne ne peut modifier votre fiche.
+          </div>
+
+          <div style="margin-top:14px">
+            <div class="title" style="margin-bottom:6px;">Ma fiche</div>
+            <div class="sub" id="pharmaInfo">—</div>
+          </div>
         </div>
       </div>
-      <p class="muted">Chaque pharmacie a un code unique. Sans ce code, aucune modification n’est possible.</p>
-    </div>
 
-    <div class="card">
-      <label>Horaires (JSON)</label>
-      <textarea id="hours" rows="10"></textarea>
-      <p class="muted">Exemple: <code>{"lun":[{"de":"08:00","a":"18:00"}],"dim":[]}</code></p>
-      <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
-        <button id="btnLoad">Charger</button>
-        <button id="btnSave">Enregistrer horaires</button>
+      <!-- EDITOR -->
+      <div class="card">
+        <div class="tabs">
+          <button class="tab active" data-tab="hours">Horaires</button>
+          <button class="tab" data-tab="garde">Garde</button>
+          <button class="tab" data-tab="special">Exceptions</button>
+        </div>
+
+        <!-- HORAIRES -->
+        <div class="section active" id="tab-hours">
+          <div class="hint" style="margin-bottom:12px;">
+            Ajoutez des plages horaires par jour (ex: 08:00–13:00 puis 14:00–18:00).
+          </div>
+
+          <div id="hoursEditor"></div>
+
+          <div class="toolbar">
+            <button class="btn ghost" id="btnCopyWeek">Copier Lun→Ven</button>
+            <button class="btn good" id="btnSaveHours">Enregistrer horaires</button>
+          </div>
+
+          <div class="msg" id="msgHours"></div>
+        </div>
+
+        <!-- GARDE -->
+        <div class="section" id="tab-garde">
+          <div class="hint" style="margin-bottom:12px;">
+            Ajoutez les dates de garde. Exemple typique : 18:00 → 08:00 (passe minuit).
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Date</label>
+              <input id="gDate" type="date" />
+            </div>
+            <div>
+              <label>De</label>
+              <input id="gFrom" type="time" value="18:00" />
+            </div>
+            <div>
+              <label>À</label>
+              <input id="gTo" type="time" value="08:00" />
+            </div>
+            <div style="align-self:end">
+              <button class="btn" id="btnAddGarde">+ Ajouter</button>
+            </div>
+          </div>
+
+          <div id="gardeList" style="margin-top:12px;"></div>
+
+          <div class="toolbar">
+            <button class="btn good" id="btnSaveGarde">Enregistrer garde</button>
+          </div>
+
+          <div class="msg" id="msgGarde"></div>
+        </div>
+
+        <!-- EXCEPTIONS -->
+        <div class="section" id="tab-special">
+          <div class="hint" style="margin-bottom:12px;">
+            Exceptions = jours fériés / fermetures / horaires spéciaux (pour une date).
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Date</label>
+              <input id="sDate" type="date" />
+            </div>
+            <div>
+              <label>Type</label>
+              <select id="sType">
+                <option value="ferme">Fermé</option>
+                <option value="horaires">Horaires spéciaux</option>
+              </select>
+            </div>
+            <div>
+              <label>De</label>
+              <input id="sFrom" type="time" value="10:00" />
+            </div>
+            <div>
+              <label>À</label>
+              <input id="sTo" type="time" value="14:00" />
+            </div>
+            <div style="align-self:end">
+              <button class="btn" id="btnAddSpecial">+ Ajouter</button>
+            </div>
+          </div>
+
+          <div id="specialList" style="margin-top:12px;"></div>
+
+          <div class="toolbar">
+            <button class="btn good" id="btnSaveSpecial">Enregistrer exceptions</button>
+          </div>
+
+          <div class="msg" id="msgSpecial"></div>
+        </div>
       </div>
     </div>
-
-    <div class="card">
-      <label>Pharmacie de garde (JSON)</label>
-      <textarea id="garde" rows="8"></textarea>
-      <p class="muted">Exemple: <code>[{"date":"2025-12-20","de":"18:00","a":"08:00"}]</code></p>
-      <button id="btnSaveGarde" style="margin-top:10px;">Enregistrer garde</button>
-    </div>
-
-    <div class="card">
-      <label>Mises à jour spéciales (JSON)</label>
-      <textarea id="special" rows="8"></textarea>
-      <p class="muted">Exemple: <code>[{"date":"2025-01-01","ferme":true}]</code></p>
-      <button id="btnSaveSpecial" style="margin-top:10px;">Enregistrer spécial</button>
-    </div>
-
-    <div id="msg" class="muted"></div>
   </main>
 
   <script>
-    // ✅ Remplace cette URL par l’URL de ton Apps Script déployé (Web App)
-   const API_URL = "https://script.google.com/macros/s/AKfycbzerOqDA8hUeXuwUVSYnINSJ5xUvyW-uD9_KuEDGVac_W_xqDC9qyPVxPpGCraIAQC-/exec";
+    // ✅ Mets ton URL Apps Script ici
+    const API_URL = "https://script.google.com/macros/s/AKfycbzerOqDA8hUeXuwUVSYnINSJ5xUvyW-uD9_KuEDGVac_W_xqDC9qyPVxPpGCraIAQC-/exec";
 
+    const DAYS = [
+      { key:"lun", label:"Lundi" },
+      { key:"mar", label:"Mardi" },
+      { key:"mer", label:"Mercredi" },
+      { key:"jeu", label:"Jeudi" },
+      { key:"ven", label:"Vendredi" },
+      { key:"sam", label:"Samedi" },
+      { key:"dim", label:"Dimanche" }
+    ];
 
-    const $msg = document.getElementById("msg");
-    const $pid = document.getElementById("pid");
-    const $pcode = document.getElementById("pcode");
-    const $hours = document.getElementById("hours");
-    const $garde = document.getElementById("garde");
-    const $special = document.getElementById("special");
+    const $ = (id) => document.getElementById(id);
 
-    document.getElementById("btnLoad").onclick = loadPharmacy;
-    document.getElementById("btnSave").onclick = () => saveField("horaires_json", $hours.value);
-    document.getElementById("btnSaveGarde").onclick = () => saveField("garde_json", $garde.value);
-    document.getElementById("btnSaveSpecial").onclick = () => saveField("maj_speciale_json", $special.value);
+    let current = null; // pharmacie object
+    let hours = {};     // {lun:[{de,a}...], ...}
+    let garde = [];     // [{date,de,a}]
+    let special = [];   // [{date, ferme:true} OR {date, horaires:[{de,a}]}]
 
-    async function loadPharmacy() {
-      try {
-        $msg.textContent = "Chargement…";
-        const res = await fetch(API_URL);
-        const json = await res.json();
-        if (!json.ok) throw new Error(json.error || "Erreur API");
+    // Tabs
+    document.querySelectorAll(".tab").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        const tab = btn.dataset.tab;
+        document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+        $("tab-"+tab).classList.add("active");
+      });
+    });
 
-        const p = json.pharmacies.find(x => String(x.id) === String($pid.value.trim()));
-        if (!p) throw new Error("Pharmacie introuvable");
+    // Actions
+    $("btnLoad").onclick = loadPharmacy;
+    $("btnClear").onclick = clearAll;
 
-        $hours.value = JSON.stringify(p.horaires_json || {}, null, 2);
-        $garde.value = JSON.stringify(p.garde_json || [], null, 2);
-        $special.value = JSON.stringify(p.maj_speciale_json || [], null, 2);
+    $("btnSaveHours").onclick = () => saveField("horaires_json", buildHoursJSON());
+    $("btnSaveGarde").onclick = () => saveField("garde_json", garde);
+    $("btnSaveSpecial").onclick = () => saveField("maj_speciale_json", special);
 
-        $msg.textContent = "Données chargées.";
-      } catch (e) {
-        $msg.textContent = "Erreur: " + e.message;
+    $("btnCopyWeek").onclick = copyWeek;
+
+    $("btnAddGarde").onclick = addGarde;
+    $("btnAddSpecial").onclick = addSpecial;
+
+    setDisconnected();
+
+    function setDisconnected(){
+      $("statusPill").textContent = "Déconnecté";
+      $("statusPill").style.borderColor = "rgba(255,255,255,.12)";
+      $("pharmaInfo").textContent = "—";
+      current = null; hours = {}; garde = []; special = [];
+      renderHoursEditor();
+      renderGardeList();
+      renderSpecialList();
+    }
+
+    function setConnected(){
+      $("statusPill").textContent = "Connecté";
+      $("statusPill").style.borderColor = "rgba(51,209,143,.55)";
+    }
+
+    function toast(el, msg, type){
+      el.textContent = msg;
+      el.className = "msg " + (type === "ok" ? "ok" : type === "err" ? "err" : "");
+    }
+
+    async function fetchAll(){
+      const res = await fetch(API_URL);
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || "Erreur API");
+      return json.pharmacies;
+    }
+
+    async function loadPharmacy(){
+      try{
+        toast($("msgLogin"), "Chargement…");
+        const id = $("pid").value.trim();
+        if(!id) throw new Error("Entrez votre ID pharmacie.");
+        const list = await fetchAll();
+        const p = list.find(x => String(x.id) === String(id));
+        if(!p) throw new Error("Pharmacie introuvable. Vérifiez l’ID.");
+
+        // On ne peut pas vérifier le code côté front car il n’est pas retourné (volontaire).
+        // Le code sera vérifié au moment du SAVE (POST).
+        current = p;
+
+        hours = p.horaires_json || {};
+        garde = p.garde_json || [];
+        special = p.maj_speciale_json || [];
+
+        $("pharmaInfo").textContent =
+          `${p.nom || "—"} • ${p.ville || "—"} • ${p.adresse || "—"} • Tél: ${p.telephone || "—"}`;
+
+        setConnected();
+        renderHoursEditor();
+        renderGardeList();
+        renderSpecialList();
+
+        toast($("msgLogin"), "Fiche chargée. Vous pouvez modifier et enregistrer.", "ok");
+      }catch(e){
+        toast($("msgLogin"), "Erreur: " + e.message, "err");
       }
     }
 
-    async function saveField(fieldName, rawJson) {
-      try {
-        $msg.textContent = "Enregistrement…";
-        const id = $pid.value.trim();
-        const auth_code = $pcode.value.trim();
-        if (!id || !auth_code) throw new Error("ID et code requis");
+    function clearAll(){
+      $("pid").value = "";
+      $("pcode").value = "";
+      toast($("msgLogin"), "");
+      toast($("msgHours"), "");
+      toast($("msgGarde"), "");
+      toast($("msgSpecial"), "");
+      setDisconnected();
+    }
 
-        const parsed = rawJson.trim() ? JSON.parse(rawJson) : (fieldName === "horaires_json" ? {} : []);
+    // -------- Horaires UI --------
+    function ensureDay(key){
+      if(!hours[key]) hours[key] = [];
+      if(!Array.isArray(hours[key])) hours[key] = [];
+    }
+
+    function renderHoursEditor(){
+      const root = $("hoursEditor");
+      root.innerHTML = "";
+
+      DAYS.forEach(d=>{
+        ensureDay(d.key);
+        const dayWrap = document.createElement("div");
+        dayWrap.className = "day";
+
+        const hd = document.createElement("div");
+        hd.className = "day-hd";
+        hd.innerHTML = `
+          <div>
+            <div class="day-name">${d.label}</div>
+            <div class="small">${hours[d.key].length ? hours[d.key].map(r=>`${r.de}–${r.a}`).join(" • ") : "Fermé"}</div>
+          </div>
+          <button class="btn ghost" data-add="${d.key}">+ Ajouter une plage</button>
+        `;
+        dayWrap.appendChild(hd);
+
+        const ranges = document.createElement("div");
+        ranges.className = "ranges";
+
+        if(hours[d.key].length === 0){
+          const empty = document.createElement("div");
+          empty.className = "small";
+          empty.textContent = "Aucune plage (fermé).";
+          ranges.appendChild(empty);
+        } else {
+          hours[d.key].forEach((r, idx)=>{
+            const row = document.createElement("div");
+            row.className = "range";
+            row.innerHTML = `
+              <input type="time" value="${r.de || "08:00"}" data-day="${d.key}" data-idx="${idx}" data-k="de">
+              <input type="time" value="${r.a  || "18:00"}" data-day="${d.key}" data-idx="${idx}" data-k="a">
+              <button class="iconbtn" title="Supprimer" data-del="${d.key}" data-idx="${idx}">×</button>
+            `;
+            ranges.appendChild(row);
+          });
+        }
+
+        dayWrap.appendChild(ranges);
+        root.appendChild(dayWrap);
+      });
+
+      // events add/del
+      root.querySelectorAll("[data-add]").forEach(b=>{
+        b.onclick = ()=>{
+          const key = b.dataset.add;
+          ensureDay(key);
+          hours[key].push({de:"08:00", a:"18:00"});
+          renderHoursEditor();
+        };
+      });
+      root.querySelectorAll("[data-del]").forEach(b=>{
+        b.onclick = ()=>{
+          const key = b.dataset.del;
+          const idx = Number(b.dataset.idx);
+          hours[key].splice(idx,1);
+          renderHoursEditor();
+        };
+      });
+
+      // events inputs
+      root.querySelectorAll("input[type=time]").forEach(inp=>{
+        inp.onchange = ()=>{
+          const day = inp.dataset.day;
+          const idx = Number(inp.dataset.idx);
+          const k = inp.dataset.k;
+          hours[day][idx][k] = inp.value;
+        };
+      });
+    }
+
+    function copyWeek(){
+      // Copier les plages du lundi vers mar/mer/jeu/ven
+      ensureDay("lun");
+      ["mar","mer","jeu","ven"].forEach(k=>{
+        hours[k] = JSON.parse(JSON.stringify(hours["lun"] || []));
+      });
+      renderHoursEditor();
+      toast($("msgHours"), "Copie effectuée (Lun → Ven).", "ok");
+    }
+
+    function buildHoursJSON(){
+      // Nettoyage (supprimer plages vides)
+      const out = {};
+      DAYS.forEach(d=>{
+        const arr = (hours[d.key] || []).filter(r => r.de && r.a);
+        out[d.key] = arr;
+      });
+      return out;
+    }
+
+    // -------- Garde UI --------
+    function addGarde(){
+      const date = $("gDate").value;
+      const de = $("gFrom").value || "18:00";
+      const a  = $("gTo").value || "08:00";
+      if(!date) return toast($("msgGarde"), "Choisissez une date.", "err");
+      garde.push({ date, de, a });
+      garde.sort((x,y)=> String(x.date).localeCompare(String(y.date)));
+      renderGardeList();
+      toast($("msgGarde"), "Ajouté.", "ok");
+    }
+
+    function renderGardeList(){
+      const root = $("gardeList");
+      root.innerHTML = "";
+      if(!garde.length){
+        root.innerHTML = `<div class="small">Aucune date de garde.</div>`;
+        return;
+      }
+      garde.forEach((g, i)=>{
+        const item = document.createElement("div");
+        item.className = "listitem";
+        item.innerHTML = `
+          <div>
+            <strong>${g.date}</strong><br>
+            <span>${g.de || "18:00"} → ${g.a || "08:00"}</span>
+          </div>
+          <button class="btn bad" data-rm="${i}">Supprimer</button>
+        `;
+        root.appendChild(item);
+      });
+      root.querySelectorAll("[data-rm]").forEach(b=>{
+        b.onclick = ()=>{
+          garde.splice(Number(b.dataset.rm),1);
+          renderGardeList();
+        };
+      });
+    }
+
+    // -------- Exceptions UI --------
+    function addSpecial(){
+      const date = $("sDate").value;
+      const type = $("sType").value;
+      if(!date) return toast($("msgSpecial"), "Choisissez une date.", "err");
+
+      // remove existing same date
+      special = special.filter(x => x.date !== date);
+
+      if(type === "ferme"){
+        special.push({ date, ferme: true });
+      } else {
+        const de = $("sFrom").value || "10:00";
+        const a  = $("sTo").value || "14:00";
+        special.push({ date, horaires: [{ de, a }] });
+      }
+
+      special.sort((x,y)=> String(x.date).localeCompare(String(y.date)));
+      renderSpecialList();
+      toast($("msgSpecial"), "Exception ajoutée.", "ok");
+    }
+
+    function renderSpecialList(){
+      const root = $("specialList");
+      root.innerHTML = "";
+      if(!special.length){
+        root.innerHTML = `<div class="small">Aucune exception.</div>`;
+        return;
+      }
+      special.forEach((s, i)=>{
+        const txt = s.ferme ? "Fermé" : (s.horaires || []).map(r=>`${r.de}→${r.a}`).join(" • ");
+        const item = document.createElement("div");
+        item.className = "listitem";
+        item.innerHTML = `
+          <div>
+            <strong>${s.date}</strong><br>
+            <span>${txt}</span>
+          </div>
+          <button class="btn bad" data-rmsp="${i}">Supprimer</button>
+        `;
+        root.appendChild(item);
+      });
+      root.querySelectorAll("[data-rmsp]").forEach(b=>{
+        b.onclick = ()=>{
+          special.splice(Number(b.dataset.rmsp),1);
+          renderSpecialList();
+        };
+      });
+    }
+
+    // -------- SAVE (POST) --------
+    async function saveField(fieldName, value){
+      try{
+        if(!current) throw new Error("Chargez d’abord votre fiche (ID + Charger).");
+        const id = $("pid").value.trim();
+        const auth_code = $("pcode").value.trim();
+        if(!id || !auth_code) throw new Error("ID et code requis.");
 
         const payload = { id, auth_code };
-        payload[fieldName] = parsed;
+        payload[fieldName] = value;
 
         const res = await fetch(API_URL, {
           method: "POST",
@@ -119,11 +683,16 @@
           body: JSON.stringify(payload)
         });
         const json = await res.json();
-        if (!json.ok) throw new Error(json.error || "Erreur API");
+        if(!json.ok) throw new Error(json.error || "Erreur API");
 
-        $msg.textContent = "OK ✅ enregistré.";
-      } catch (e) {
-        $msg.textContent = "Erreur: " + e.message;
+        if(fieldName === "horaires_json") toast($("msgHours"), "Horaires enregistrés ✅", "ok");
+        if(fieldName === "garde_json") toast($("msgGarde"), "Garde enregistrée ✅", "ok");
+        if(fieldName === "maj_speciale_json") toast($("msgSpecial"), "Exceptions enregistrées ✅", "ok");
+      }catch(e){
+        const msg = "Erreur: " + e.message;
+        if(fieldName === "horaires_json") toast($("msgHours"), msg, "err");
+        if(fieldName === "garde_json") toast($("msgGarde"), msg, "err");
+        if(fieldName === "maj_speciale_json") toast($("msgSpecial"), msg, "err");
       }
     }
   </script>
