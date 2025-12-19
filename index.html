@@ -5,55 +5,282 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>PharmaMap TN</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
   <style>
-    body { font-family: system-ui, Arial; margin:0; }
-    header { padding:12px 16px; border-bottom:1px solid #eee; display:flex; gap:12px; align-items:center; }
-    #map { height: 55vh; }
-    #panel { padding: 12px 16px; }
-    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
-    .card { border:1px solid #eee; border-radius:12px; padding:12px; margin:10px 0; }
-    .muted { color:#666; font-size: 14px; }
-    button { padding:10px 12px; border-radius:10px; border:1px solid #ddd; background:#fff; cursor:pointer; }
-    input { padding:10px 12px; border-radius:10px; border:1px solid #ddd; }
-    .badge { display:inline-block; padding:4px 8px; border-radius:999px; border:1px solid #ddd; font-size:12px; }
+    :root{
+      --bg:#0b1020;
+      --card:#0f1733;
+      --text:#e9ecff;
+      --muted:#aab2e6;
+      --line:rgba(255,255,255,.10);
+      --accent:#7aa7ff;
+      --good:#33d18f;
+      --warn:#ffcc66;
+      --bad:#ff5a7a;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: radial-gradient(1200px 600px at 20% 0%, rgba(122,167,255,.25), transparent 50%),
+                  radial-gradient(1200px 600px at 90% 10%, rgba(51,209,143,.18), transparent 45%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+    a{ color:var(--accent); text-decoration:none; }
+    header{
+      max-width:1200px;
+      margin:0 auto;
+      padding:18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:800;
+      letter-spacing:.2px;
+    }
+    .dot{
+      width:10px; height:10px; border-radius:999px;
+      background:var(--accent);
+      box-shadow:0 0 20px rgba(122,167,255,.7);
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color:var(--muted);
+      font-size:13px;
+      white-space:nowrap;
+    }
+    .container{
+      max-width:1200px;
+      margin:0 auto;
+      padding:0 18px 18px;
+      display:grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap:16px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .container{ grid-template-columns: 1fr; }
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .hd{
+      padding:14px 14px;
+      background: rgba(255,255,255,.03);
+      border-bottom:1px solid var(--line);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    .title{ font-size:14px; font-weight:800; }
+    .sub{ font-size:12px; color:var(--muted); }
+    .bd{ padding:14px; }
+    #map{
+      height: 62vh;
+      min-height: 420px;
+    }
+    .controls{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:12px;
+    }
+    .leftControls{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    }
+    .rightControls{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    }
+    button, input{
+      font: inherit;
+    }
+    button{
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background: rgba(122,167,255,.14);
+      color:var(--text);
+      cursor:pointer;
+      transition: transform .05s ease, background .2s ease;
+      font-weight:700;
+    }
+    button:hover{ background: rgba(122,167,255,.22); }
+    button:active{ transform: translateY(1px); }
+    button.ghost{ background: rgba(255,255,255,.06); }
+    button.ghost:hover{ background: rgba(255,255,255,.10); }
+
+    input[type="text"]{
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      color:var(--text);
+      outline:none;
+      min-width: 220px;
+    }
+    input::placeholder{ color: rgba(233,236,255,.5); }
+
+    .toggle{
+      display:flex; align-items:center; gap:8px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color:var(--muted);
+      user-select:none;
+      cursor:pointer;
+      font-weight:700;
+    }
+    .toggle input{ accent-color: var(--accent); }
+
+    .status{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .list{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .item{
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.12);
+      border-radius:16px;
+      padding:12px;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .item strong{ font-size:14px; }
+    .meta{ font-size:12px; color:var(--muted); margin-top:3px; }
+    .badges{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      font-size:12px;
+      color:var(--muted);
+    }
+    .badge.good{ border-color: rgba(51,209,143,.35); color: rgba(51,209,143,.95); }
+    .badge.warn{ border-color: rgba(255,204,102,.45); color: rgba(255,204,102,.95); }
+
+    .actions{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-width: 140px;
+    }
+    .actions button{
+      width:100%;
+    }
+    .empty{
+      color:var(--muted);
+      font-size:13px;
+      padding:10px 2px;
+    }
+
+    /* Leaflet tweaks */
+    .leaflet-control-attribution{
+      background: rgba(0,0,0,.35) !important;
+      color: rgba(255,255,255,.75) !important;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.12);
+      margin: 10px !important;
+      padding: 6px 10px !important;
+    }
+    .leaflet-control-attribution a { color: rgba(255,255,255,.85) !important; }
   </style>
 </head>
+
 <body>
   <header>
-    <strong>PharmaMap TN</strong>
-    <span class="muted">Pharmacies proches + garde</span>
-    <a href="./pharmacy.html" style="margin-left:auto;">Espace pharmacie</a>
+    <div class="brand"><span class="dot"></span> PharmaMap TN</div>
+    <div class="pill">
+      <span id="pillText">📍 Active “Ma position” pour trier par distance</span>
+      <a href="./pharmacy.html" style="margin-left:10px;">Espace pharmacie →</a>
+    </div>
   </header>
 
-  <div id="map"></div>
-
-  <div id="panel">
-    <div class="row">
-      <button id="btnLocate">📍 Ma position</button>
-      <label class="row" style="gap:6px;">
-        <input type="checkbox" id="onlyOpen">
-        Ouvert maintenant
-      </label>
-      <label class="row" style="gap:6px;">
-        <input type="checkbox" id="onlyGarde">
-        De garde aujourd’hui
-      </label>
-      <input id="cityFilter" placeholder="Filtrer par ville (ex: Tunis)" />
+  <div class="container">
+    <!-- MAP -->
+    <div class="card">
+      <div class="hd">
+        <div>
+          <div class="title">Carte</div>
+          <div class="sub">OpenStreetMap • Tunisie</div>
+        </div>
+        <button class="ghost" id="btnLocate">📍 Ma position</button>
+      </div>
+      <div id="map"></div>
     </div>
 
-    <div id="status" class="muted" style="margin-top:8px;"></div>
-    <div id="list"></div>
+    <!-- LIST / FILTERS -->
+    <div class="card">
+      <div class="hd">
+        <div>
+          <div class="title">Pharmacies proches</div>
+          <div class="sub">Filtrer et ouvrir l’itinéraire</div>
+        </div>
+        <span class="pill" id="countPill">0</span>
+      </div>
+
+      <div class="bd">
+        <div class="controls">
+          <div class="leftControls">
+            <label class="toggle">
+              <input type="checkbox" id="onlyOpen">
+              Ouvert maintenant
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="onlyGarde">
+              De garde
+            </label>
+          </div>
+          <div class="rightControls">
+            <input type="text" id="cityFilter" placeholder="Ville (ex: Tunis)" />
+          </div>
+        </div>
+
+        <div class="status" id="status">Chargement des pharmacies…</div>
+
+        <div class="list" id="list" style="margin-top:12px;"></div>
+      </div>
+    </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // ✅ 1) Remplace cette URL par l’URL de ton Apps Script déployé (Web App)
+    // ✅ Ton API Apps Script
     const API_URL = "https://script.google.com/macros/s/AKfycbzerOqDA8hUeXuwUVSYnINSJ5xUvyW-uD9_KuEDGVac_W_xqDC9qyPVxPpGCraIAQC-/exec";
-
-
     const TUNISIA_TZ = "Africa/Tunis";
 
-    let map = L.map('map').setView([36.8065, 10.1815], 12); // Tunis par défaut
+    // Map init
+    let map = L.map('map').setView([36.8065, 10.1815], 12); // Tunis default
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap'
@@ -66,6 +293,8 @@
 
     const $status = document.getElementById('status');
     const $list = document.getElementById('list');
+    const $countPill = document.getElementById('countPill');
+    const $pillText = document.getElementById('pillText');
 
     document.getElementById('btnLocate').onclick = locateMe;
     document.getElementById('onlyOpen').onchange = render;
@@ -76,9 +305,9 @@
 
     async function init() {
       try {
-        $status.textContent = "Chargement des pharmacies…";
+        $status.textContent = "Chargement…";
         pharmacies = await fetchPharmacies();
-        $status.textContent = "OK. Active “Ma position” pour voir les plus proches.";
+        $status.textContent = "OK. Choisissez des filtres ou activez “Ma position”.";
         render();
       } catch (e) {
         $status.textContent = "Erreur: " + e.message;
@@ -108,17 +337,19 @@
           if (userMarker) map.removeLayer(userMarker);
           userMarker = L.marker([userPos.lat, userPos.lng]).addTo(map).bindPopup("Vous êtes ici");
           map.setView([userPos.lat, userPos.lng], 14);
-          $status.textContent = "Position détectée.";
+          $status.textContent = "Position détectée ✅";
+          $pillText.textContent = "Tri par distance activé";
           render();
         },
         err => {
-          $status.textContent = "Impossible d’obtenir la position (autorisation ?) : " + err.message;
+          $status.textContent = "Impossible d’obtenir la position : " + err.message;
         },
         { enableHighAccuracy: true, timeout: 10000 }
       );
     }
 
     function render() {
+      // Clear markers
       markers.forEach(m => map.removeLayer(m));
       markers = [];
       $list.innerHTML = "";
@@ -128,7 +359,7 @@
       const city = (document.getElementById('cityFilter').value || "").trim().toLowerCase();
 
       const now = new Date();
-      const todayStr = toISODateInTZ(now, TUNISIA_TZ); // YYYY-MM-DD
+      const todayStr = toISODateInTZ(now, TUNISIA_TZ);
 
       let list = pharmacies.slice();
 
@@ -144,45 +375,54 @@
       if (onlyOpen) list = list.filter(p => p.openNow);
       if (onlyGarde) list = list.filter(p => p.isGardeToday);
 
-      // tri par distance si position dispo
       if (userPos) list.sort((a,b) => (a.distKm ?? 1e9) - (b.distKm ?? 1e9));
 
-      // markers
-      list.forEach(p => {
+      // Limit display for performance
+      const display = list.slice(0, 50);
+      $countPill.textContent = `${list.length}`;
+
+      // Markers
+      display.forEach(p => {
         const m = L.marker([p.lat, p.lng]).addTo(map);
         m.bindPopup(`<b>${escapeHtml(p.nom)}</b><br>${escapeHtml(p.adresse || "")}`);
         markers.push(m);
       });
 
-      // liste
-      list.slice(0, 50).forEach(p => {
-        const card = document.createElement('div');
-        card.className = "card";
+      // List UI
+      display.forEach(p => {
+        const item = document.createElement('div');
+        item.className = "item";
 
         const badges = [];
-        if (p.openNow) badges.push(`<span class="badge">Ouverte</span>`);
-        if (p.isGardeToday) badges.push(`<span class="badge">De garde</span>`);
+        if (p.openNow) badges.push(`<span class="badge good">✅ Ouverte</span>`);
+        if (p.isGardeToday) badges.push(`<span class="badge warn">🟡 De garde</span>`);
 
-        card.innerHTML = `
-          <div style="display:flex; justify-content:space-between; gap:12px;">
-            <div>
-              <div><strong>${escapeHtml(p.nom)}</strong> ${badges.join(" ")}</div>
-              <div class="muted">${escapeHtml(p.adresse || "")} — ${escapeHtml(p.ville || "")}</div>
-              <div class="muted">${userPos && p.distKm!=null ? (p.distKm.toFixed(2) + " km") : ""}</div>
-              <div class="muted">Tél: ${escapeHtml(p.telephone || "")}</div>
-            </div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-              <button data-id="${escapeHtml(p.id)}" class="btnItin">🧭 Itinéraire</button>
-            </div>
+        const distTxt = userPos && p.distKm != null ? `${p.distKm.toFixed(2)} km` : "—";
+
+        item.innerHTML = `
+          <div style="min-width:0;">
+            <strong>${escapeHtml(p.nom)}</strong>
+            <div class="meta">${escapeHtml(p.adresse || "")} • ${escapeHtml(p.ville || "")}</div>
+            <div class="meta">📍 Distance: ${distTxt} • ☎ ${escapeHtml(p.telephone || "—")}</div>
+            <div class="badges">${badges.join("") || `<span class="badge">Info</span>`}</div>
+          </div>
+
+          <div class="actions">
+            <button class="ghost" data-center>Voir sur carte</button>
+            <button data-route>🧭 Itinéraire</button>
           </div>
         `;
-        $list.appendChild(card);
 
-        card.querySelector(".btnItin").onclick = () => openItinerary(p.lat, p.lng);
+        item.querySelector("[data-center]").onclick = () => {
+          map.setView([p.lat, p.lng], Math.max(map.getZoom(), 15));
+        };
+        item.querySelector("[data-route]").onclick = () => openItinerary(p.lat, p.lng);
+
+        $list.appendChild(item);
       });
 
       if (list.length === 0) {
-        $list.innerHTML = `<div class="muted" style="margin-top:12px;">Aucun résultat avec ces filtres.</div>`;
+        $list.innerHTML = `<div class="empty">Aucun résultat avec ces filtres.</div>`;
       }
     }
 
@@ -199,7 +439,6 @@
       const special = (p.maj_speciale_json || []);
       const today = toISODateInTZ(now, TUNISIA_TZ);
 
-      // override special
       const sp = special.find(x => x.date === today);
       if (sp) {
         if (sp.ferme) return false;
@@ -216,10 +455,7 @@
       const garde = (p.garde_json || []);
       const entry = garde.find(g => g.date === todayStr);
       if (!entry) return false;
-
-      if (entry.de && entry.a) {
-        return inTimeRangeWithPossibleWrap(now, entry.de, entry.a);
-      }
+      if (entry.de && entry.a) return inTimeRangeWithPossibleWrap(now, entry.de, entry.a);
       return true;
     }
 
@@ -238,7 +474,6 @@
       const { minutes: nowM } = timeInTZ(now, TUNISIA_TZ);
       const deM = hhmmToMinutes(de);
       const aM  = hhmmToMinutes(a);
-
       if (aM >= deM) return nowM >= deM && nowM <= aM;
       return (nowM >= deM) || (nowM <= aM);
     }
@@ -274,7 +509,6 @@
       return { hh, mm, minutes: hh*60+mm };
     }
 
-    // distance
     function haversineKm(lat1, lon1, lat2, lon2) {
       const R = 6371;
       const dLat = (lat2-lat1) * Math.PI/180;
