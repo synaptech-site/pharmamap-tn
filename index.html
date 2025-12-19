@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PharmaMap TN</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    body { font-family: system-ui, Arial; margin:0; }
+    header { padding:12px 16px; border-bottom:1px solid #eee; display:flex; gap:12px; align-items:center; }
+    #map { height: 55vh; }
+    #panel { padding: 12px 16px; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    .card { border:1px solid #eee; border-radius:12px; padding:12px; margin:10px 0; }
+    .muted { color:#666; font-size: 14px; }
+    button { padding:10px 12px; border-radius:10px; border:1px solid #ddd; background:#fff; cursor:pointer; }
+    input { padding:10px 12px; border-radius:10px; border:1px solid #ddd; }
+    .badge { display:inline-block; padding:4px 8px; border-radius:999px; border:1px solid #ddd; font-size:12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>PharmaMap TN</strong>
+    <span class="muted">Pharmacies proches + garde</span>
+    <a href="./pharmacy.html" style="margin-left:auto;">Espace pharmacie</a>
+  </header>
+
+  <div id="map"></div>
+
+  <div id="panel">
+    <div class="row">
+      <button id="btnLocate">📍 Ma position</button>
+      <label class="row" style="gap:6px;">
+        <input type="checkbox" id="onlyOpen">
+        Ouvert maintenant
+      </label>
+      <label class="row" style="gap:6px;">
+        <input type="checkbox" id="onlyGarde">
+        De garde aujourd’hui
+      </label>
+      <input id="cityFilter" placeholder="Filtrer par ville (ex: Tunis)" />
+    </div>
+
+    <div id="status" class="muted" style="margin-top:8px;"></div>
+    <div id="list"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ✅ 1) Remplace cette URL par l’URL de ton Apps Script déployé (Web App)
+    const API_URL = "https://script.google.com/macros/s/AKfycbzerOqDA8hUeXuwUVSYnINSJ5xUvyW-uD9_KuEDGVac_W_xqDC9qyPVxPpGCraIAQC-/exec";
+
+
+    const TUNISIA_TZ = "Africa/Tunis";
+
+    let map = L.map('map').setView([36.8065, 10.1815], 12); // Tunis par défaut
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    let userMarker = null;
+    let markers = [];
+    let userPos = null;
+    let pharmacies = [];
+
+    const $status = document.getElementById('status');
+    const $list = document.getElementById('list');
+
+    document.getElementById('btnLocate').onclick = locateMe;
+    document.getElementById('onlyOpen').onchange = render;
+    document.getElementById('onlyGarde').onchange = render;
+    document.getElementById('cityFilter').oninput = render;
+
+    init();
+
+    async function init() {
+      try {
+        $status.textContent = "Chargement des pharmacies…";
+        pharmacies = await fetchPharmacies();
+        $status.textContent = "OK. Active “Ma position” pour voir les plus proches.";
+        render();
+      } catch (e) {
+        $status.textContent = "Erreur: " + e.message;
+      }
+    }
+
+    async function fetchPharmacies() {
+      const res = await fetch(API_URL);
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || "Erreur API");
+      return json.pharmacies.map(p => ({
+        ...p,
+        lat: Number(p.lat),
+        lng: Number(p.lng),
+      })).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+    }
+
+    function locateMe() {
+      if (!navigator.geolocation) {
+        $status.textContent = "Géolocalisation non supportée.";
+        return;
+      }
+      $status.textContent = "Localisation en cours…";
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          if (userMarker) map.removeLayer(userMarker);
+          userMarker = L.marker([userPos.lat, userPos.lng]).addTo(map).bindPopup("Vous êtes ici");
+          map.setView([userPos.lat, userPos.lng], 14);
+          $status.textContent = "Position détectée.";
+          render();
+        },
+        err => {
+          $status.textContent = "Impossible d’obtenir la position (autorisation ?) : " + err.message;
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+
+    function render() {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      $list.innerHTML = "";
+
+      const onlyOpen = document.getElementById('onlyOpen').checked;
+      const onlyGarde = document.getElementById('onlyGarde').checked;
+      const city = (document.getElementById('cityFilter').value || "").trim().toLowerCase();
+
+      const now = new Date();
+      const todayStr = toISODateInTZ(now, TUNISIA_TZ); // YYYY-MM-DD
+
+      let list = pharmacies.slice();
+
+      if (city) list = list.filter(p => String(p.ville || "").toLowerCase().includes(city));
+
+      list = list.map(p => {
+        const distKm = userPos ? haversineKm(userPos.lat, userPos.lng, p.lat, p.lng) : null;
+        const openNow = isOpenNow(p, now);
+        const isGardeToday = isOnGardeToday(p, todayStr, now);
+        return { ...p, distKm, openNow, isGardeToday };
+      });
+
+      if (onlyOpen) list = list.filter(p => p.openNow);
+      if (onlyGarde) list = list.filter(p => p.isGardeToday);
+
+      // tri par distance si position dispo
+      if (userPos) list.sort((a,b) => (a.distKm ?? 1e9) - (b.distKm ?? 1e9));
+
+      // markers
+      list.forEach(p => {
+        const m = L.marker([p.lat, p.lng]).addTo(map);
+        m.bindPopup(`<b>${escapeHtml(p.nom)}</b><br>${escapeHtml(p.adresse || "")}`);
+        markers.push(m);
+      });
+
+      // liste
+      list.slice(0, 50).forEach(p => {
+        const card = document.createElement('div');
+        card.className = "card";
+
+        const badges = [];
+        if (p.openNow) badges.push(`<span class="badge">Ouverte</span>`);
+        if (p.isGardeToday) badges.push(`<span class="badge">De garde</span>`);
+
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; gap:12px;">
+            <div>
+              <div><strong>${escapeHtml(p.nom)}</strong> ${badges.join(" ")}</div>
+              <div class="muted">${escapeHtml(p.adresse || "")} — ${escapeHtml(p.ville || "")}</div>
+              <div class="muted">${userPos && p.distKm!=null ? (p.distKm.toFixed(2) + " km") : ""}</div>
+              <div class="muted">Tél: ${escapeHtml(p.telephone || "")}</div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <button data-id="${escapeHtml(p.id)}" class="btnItin">🧭 Itinéraire</button>
+            </div>
+          </div>
+        `;
+        $list.appendChild(card);
+
+        card.querySelector(".btnItin").onclick = () => openItinerary(p.lat, p.lng);
+      });
+
+      if (list.length === 0) {
+        $list.innerHTML = `<div class="muted" style="margin-top:12px;">Aucun résultat avec ces filtres.</div>`;
+      }
+    }
+
+    function openItinerary(lat, lng) {
+      const isApple = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
+      const url = isApple
+        ? `http://maps.apple.com/?daddr=${lat},${lng}`
+        : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+      window.open(url, "_blank");
+    }
+
+    // ---- Horaires & garde ----
+    function isOpenNow(p, now) {
+      const special = (p.maj_speciale_json || []);
+      const today = toISODateInTZ(now, TUNISIA_TZ);
+
+      // override special
+      const sp = special.find(x => x.date === today);
+      if (sp) {
+        if (sp.ferme) return false;
+        if (sp.horaires) return inTimeRanges(now, sp.horaires);
+      }
+
+      const h = p.horaires_json || {};
+      const dayKey = ["dim","lun","mar","mer","jeu","ven","sam"][dayOfWeekInTZ(now, TUNISIA_TZ)];
+      const ranges = h[dayKey] || [];
+      return inTimeRanges(now, ranges);
+    }
+
+    function isOnGardeToday(p, todayStr, now) {
+      const garde = (p.garde_json || []);
+      const entry = garde.find(g => g.date === todayStr);
+      if (!entry) return false;
+
+      if (entry.de && entry.a) {
+        return inTimeRangeWithPossibleWrap(now, entry.de, entry.a);
+      }
+      return true;
+    }
+
+    function inTimeRanges(now, ranges) {
+      return ranges.some(r => inTimeRange(now, r.de, r.a));
+    }
+
+    function inTimeRange(now, de, a) {
+      const { minutes: nowM } = timeInTZ(now, TUNISIA_TZ);
+      const deM = hhmmToMinutes(de);
+      const aM  = hhmmToMinutes(a);
+      return nowM >= deM && nowM <= aM;
+    }
+
+    function inTimeRangeWithPossibleWrap(now, de, a) {
+      const { minutes: nowM } = timeInTZ(now, TUNISIA_TZ);
+      const deM = hhmmToMinutes(de);
+      const aM  = hhmmToMinutes(a);
+
+      if (aM >= deM) return nowM >= deM && nowM <= aM;
+      return (nowM >= deM) || (nowM <= aM);
+    }
+
+    function hhmmToMinutes(hhmm) {
+      const [h,m] = String(hhmm).split(":").map(Number);
+      return h*60 + m;
+    }
+
+    // ---- TZ helpers ----
+    function toISODateInTZ(date, tz) {
+      const parts = new Intl.DateTimeFormat('fr-TN', {
+        timeZone: tz, year:'numeric', month:'2-digit', day:'2-digit'
+      }).formatToParts(date);
+      const y = parts.find(p=>p.type==='year').value;
+      const mo = parts.find(p=>p.type==='month').value;
+      const d = parts.find(p=>p.type==='day').value;
+      return `${y}-${mo}-${d}`;
+    }
+
+    function dayOfWeekInTZ(date, tz) {
+      const wd = new Intl.DateTimeFormat('fr-TN', { timeZone: tz, weekday:'short' }).format(date).toLowerCase();
+      const map = { "dim.":0,"lun.":1,"mar.":2,"mer.":3,"jeu.":4,"ven.":5,"sam.":6 };
+      return map[wd] ?? date.getDay();
+    }
+
+    function timeInTZ(date, tz) {
+      const parts = new Intl.DateTimeFormat('fr-TN', {
+        timeZone: tz, hour:'2-digit', minute:'2-digit', hour12:false
+      }).formatToParts(date);
+      const hh = Number(parts.find(p=>p.type==='hour').value);
+      const mm = Number(parts.find(p=>p.type==='minute').value);
+      return { hh, mm, minutes: hh*60+mm };
+    }
+
+    // distance
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2-lat1) * Math.PI/180;
+      const dLon = (lon2-lon1) * Math.PI/180;
+      const a = Math.sin(dLat/2)**2 +
+        Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
+        Math.sin(dLon/2)**2;
+      return 2*R*Math.asin(Math.sqrt(a));
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/[&<>"']/g, c => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+      }[c]));
+    }
+  </script>
+</body>
+</html>
